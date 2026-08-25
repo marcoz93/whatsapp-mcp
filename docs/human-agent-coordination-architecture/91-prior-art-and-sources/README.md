@@ -15,3 +15,10 @@ Registrar formalizações existentes antes de inventar novos conceitos.
 ## Fontes iniciais
 
 Gaia, Extended Gaia, MOISE+, BDI, CMMN, BPMN, DMN, conversas para ação, teoria da coordenação e compromissos em sistemas multiagentes.
+
+## Notas separadas já abertas
+
+- [Gaia](gaia/): modelo organizacional, relação com os eixos e limites.
+- [A Conceptual Analysis of Commitments in Multiagent Systems](commitments-in-multiagent-systems/): referência de Singh e distinção inicial entre compromissos psicológicos e sociais.
+
+Uma nota de fonte descreve a proposta de seus autores. As definições deste projeto continuam pertencendo aos eixos correspondentes.
