@@ -141,6 +141,113 @@ O agente não movimenta dinheiro sem uma autorização específica e verificáve
 
 Ideias e restrições em conversas → pesquisa → comparação → negociação → reservas aprovadas → agenda consolidada → acompanhamento durante a viagem.
 
+## Da timeline ao workflow orientado por eventos
+
+Uma timeline responde **o que aconteceu e quando**. Um workflow responde também:
+
+- Em qual estado o processo está agora?
+- O que estamos esperando?
+- Qual informação ainda falta?
+- Quais caminhos estão permitidos?
+- Quem ou qual agente deve agir?
+- Quando devemos cobrar, escalar, abandonar ou concluir?
+
+O modelo recomendado combina três camadas:
+
+1. **Log de eventos imutável:** preserva mensagens, datas, decisões e ações.
+2. **Estado atual derivado:** representa a situação operacional do processo.
+3. **Política de transição:** decide os próximos estados e ações a partir dos eventos recebidos.
+
+### Anatomia de um workflow
+
+| Elemento | Exemplo |
+|---|---|
+| Instância | Contratar um eletricista para resolver o problema X |
+| Estado | Aguardando orçamentos |
+| Evento | Orçamento recebido do fornecedor A |
+| Contexto | Requisitos, orçamento máximo, prazo e fornecedores consultados |
+| Guarda | Pelo menos dois orçamentos recebidos ou prazo encerrado |
+| Transição | Aguardando orçamentos → Comparando propostas |
+| Ação | Extrair preço, prazo e condições; atualizar a comparação |
+| Timeout | Cobrar fornecedor após dois dias sem resposta |
+| Escalação | Pedir decisão humana quando todas as propostas excederem o limite |
+| Estado final | Serviço concluído, cancelado ou necessidade abandonada |
+
+### Workflow de pesquisa e orçamento
+
+```text
+Necessidade detectada
+  → requisitos incompletos? → coletar informações
+  → requisitos completos → pesquisar fornecedores
+  → fornecedores selecionados → solicitar orçamentos
+  → aguardando respostas
+      ├─ sem resposta no prazo → fazer follow-up
+      ├─ recusou o serviço → substituir fornecedor
+      ├─ pediu esclarecimento → responder e continuar aguardando
+      └─ orçamento recebido → extrair e registrar proposta
+  → quantidade mínima recebida ou prazo encerrado
+  → comparar propostas
+      ├─ propostas incomparáveis → pedir esclarecimentos
+      ├─ todas acima do limite → negociar ou pesquisar novamente
+      ├─ proposta adequada → pedir aprovação
+      └─ nenhuma viável → encerrar sem contratação
+  → aprovado → agendar
+  → serviço em andamento
+      ├─ concluído → avaliar resultado
+      ├─ não compareceu → reagendar ou trocar fornecedor
+      └─ problema adicional → abrir novo ramo de trabalho
+  → resultado alimenta a memória de fornecedores e negociações
+```
+
+### Estados paralelos por fornecedor
+
+O processo geral pode estar em **Aguardando orçamentos**, enquanto cada fornecedor possui seu próprio subestado:
+
+- Não contatado.
+- Aguardando resposta.
+- Pediu esclarecimentos.
+- Orçamento recebido.
+- Em negociação.
+- Recusou ou foi descartado.
+- Selecionado.
+
+Isso permite receber informações em qualquer ordem sem perder o estado da negociação. Um agregador observa os subestados e decide quando o processo geral pode avançar para comparação.
+
+### Agentes como trabalhadores das transições
+
+Os agentes não precisam controlar todo o processo. Cada um pode executar uma função restrita:
+
+- **Detector:** transforma mensagens em eventos candidatos.
+- **Extrator:** identifica preço, prazo, condições e compromissos.
+- **Pesquisador:** encontra alternativas quando faltam opções.
+- **Comparador:** normaliza e compara propostas.
+- **Negociador:** conduz contrapropostas dentro de limites.
+- **Secretário:** agenda, lembra e cobra respostas.
+- **Supervisor:** aplica regras, pede aprovação e resolve exceções.
+- **Memória:** registra resultado e atualiza perfis de fornecedores.
+
+O workflow é o coordenador; os agentes são acionados somente quando uma transição precisa deles.
+
+### Novas dimensões para a Zwicky Box
+
+| Dimensão | Possibilidade 1 | Possibilidade 2 | Possibilidade 3 | Possibilidade 4 |
+|---|---|---|---|---|
+| Modelo temporal | Timeline simples | Estado atual | Statechart hierárquico | Processos paralelos |
+| Ramificação | Regra fixa | Confiança do agente | Prazo ou ausência | Decisão humana |
+| Espera | Sem prazo | Lembrete | Follow-up automático | Escalação |
+| Dependência | Nenhuma | Informação faltante | Outra pessoa | Outro sistema |
+| Exceção | Ignorar | Tentar novamente | Trocar estratégia | Escalar ao usuário |
+| Fechamento | Manual | Resultado detectado | Confirmação externa | Timeout definitivo |
+| Aprendizado | Nenhum | Atualizar perfil | Atualizar regra | Atualizar playbook |
+
+### Flywheels habilitadas pelo workflow
+
+- **Negociação:** propostas e resultados melhoram limites, argumentos e seleção futura.
+- **Fornecedores:** cumprimento de prazo, preço e qualidade formam um índice de confiabilidade.
+- **Compromissos:** atrasos e confirmações melhoram lembretes e previsões.
+- **Decisões:** escolhas anteriores ajudam a comparar novas alternativas com preferências reais.
+- **Exceções:** cada intervenção humana pode virar uma regra para casos semelhantes.
+
 ## Agentes conversando ou negociando pelo usuário
 
 É tecnicamente possível, mas exige mais do que a função de enviar mensagens. Um negociador persistente precisa de:
@@ -182,4 +289,3 @@ Questões ainda abertas:
 - Quais ações permanecem sempre como rascunho?
 - Qual ferramenta deve receber compromissos e tarefas?
 - Como medir se cada flywheel realmente melhorou a vida ou a operação?
-
