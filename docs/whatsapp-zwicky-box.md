@@ -173,6 +173,79 @@ O modelo recomendado combina três camadas:
 | Escalação | Pedir decisão humana quando todas as propostas excederem o limite |
 | Estado final | Serviço concluído, cancelado ou necessidade abandonada |
 
+### Pedido de informação como submáquina de estados
+
+“O fornecedor pediu uma informação” é apenas o evento inicial. O workflow precisa descobrir qual informação foi pedida e transformar cada item em uma dependência explícita.
+
+Cada requisito de informação pode guardar:
+
+- Tipo e descrição.
+- Entidade a que se refere.
+- Obrigatoriedade para o próximo passo.
+- Fonte esperada.
+- Prazo.
+- Sensibilidade e permissão de compartilhamento.
+- Valor atual, origem, confiança e data de validade.
+
+O estado da informação não deve ser apenas `temos` ou `não temos`:
+
+| Estado da informação | Significado |
+|---|---|
+| Desconhecida | Ainda não existe valor conhecido |
+| Conhecida, não verificada | Existe um valor, mas falta confirmação |
+| Conhecida e verificada | Pode ser usado na transição |
+| Inferida | O agente deduziu e precisa avaliar se exige confirmação |
+| Desatualizada | Já existiu, mas pode não ser válida agora |
+| Conflitante | Existem valores incompatíveis |
+| Indisponível | Não há fonte capaz de fornecê-la |
+| Restrita | Existe, mas não pode ser compartilhada sem autorização |
+
+```text
+INFORMAÇÃO_SOLICITADA
+  → classificar tipo, finalidade e sensibilidade
+  → avaliar requisito
+      ├─ conhecida + verificada + atual + permitida → responder
+      ├─ conhecida, mas não verificada → confirmar
+      ├─ inferida → confirmar ou responder com ressalva
+      ├─ disponível em sistema interno → buscar e validar
+      ├─ pesquisável externamente → acionar pesquisador
+      ├─ depende do usuário → perguntar e aguardar
+      ├─ conflitante → reconciliar fontes
+      ├─ restrita → pedir autorização ou recusar
+      └─ indisponível → propor alternativa ou encerrar ramo
+```
+
+A guarda correta para responder é mais rica que `[hasInformation]`:
+
+```text
+[known && verified && fresh && allowedToShare]
+```
+
+#### Vários requisitos em paralelo
+
+Uma única mensagem pode pedir endereço, metragem, fotos e prazo. Cada requisito possui estado próprio:
+
+```text
+Endereço: conhecido, mas restrito → aguardando autorização
+Metragem: desconhecida → aguardando usuário
+Fotos: disponíveis → prontas para envio
+Prazo: inferido → aguardando confirmação
+```
+
+O estado composto **Preparando informações** só termina quando todos os requisitos obrigatórios estiverem resolvidos. Requisitos opcionais podem expirar ou seguir sem resposta, conforme a política.
+
+#### Evento, contexto e estado
+
+| Conceito | Neste exemplo |
+|---|---|
+| Evento | O fornecedor pediu metragem e endereço |
+| Payload do evento | Tipos solicitados, solicitante e prazo |
+| Contexto | Valores conhecidos, fontes, permissões e confiança |
+| Estado composto | Preparando informações solicitadas |
+| Guarda | Todos os requisitos obrigatórios estão resolvidos? |
+| Ação | Buscar, perguntar, confirmar, responder ou recusar |
+| Próximo estado | Aguardando orçamento atualizado |
+
 ### Workflow de pesquisa e orçamento
 
 ```text
