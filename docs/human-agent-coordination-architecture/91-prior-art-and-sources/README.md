@@ -18,6 +18,7 @@ Gaia, Extended Gaia, MOISE+, BDI, CMMN, BPMN, DMN, conversas para ação, teoria
 
 ## Notas separadas já abertas
 
+- [Referências de produtos e implementações](referencias/): PromptQL e futuras referências não acadêmicas.
 - [The Architecture of Complexity](architecture-of-complexity/): hierarquia, formas intermediárias estáveis, quase decomponibilidade e consequências para o design time.
 - [Gaia](gaia/): modelo organizacional, relação com os eixos e limites.
 - [A Conceptual Analysis of Commitments in Multiagent Systems](commitments-in-multiagent-systems/): referência de Singh e distinção inicial entre compromissos psicológicos e sociais.
