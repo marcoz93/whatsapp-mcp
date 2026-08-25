@@ -4,11 +4,12 @@
 
 Munindar P. Singh. **A Conceptual Analysis of Commitments in Multiagent Systems**. Department of Computer Science, North Carolina State University, Technical Report TR-96-09, 16 de maio de 1996.
 
+- [Cópia local preservada](singh-1996-conceptual-analysis-of-commitments.pdf)
 - [PDF mantido pelo autor](https://www.csc2.ncsu.edu/faculty/mpsingh/papers/mas/commit.pdf)
 - [Registro institucional da NC State University Libraries](https://repository.lib.ncsu.edu/items/a51477a9-ddb3-4c93-9c26-268ee5f2fb01)
 - [Publicações de Munindar P. Singh](https://www.csc2.ncsu.edu/faculty/mpsingh/papers/)
 
-O registro institucional confirma autor, ano, número do relatório e os arquivos `TR-96-09.pdf` e `TR-96-09.ps`. O PDF do autor tem 15 páginas.
+O registro institucional confirma autor, ano, número do relatório e os arquivos `TR-96-09.pdf` e `TR-96-09.ps`. Como o servidor do autor bloqueou o download automatizado, a cópia local foi recuperada de uma captura de 7 de maio de 2024 da mesma URL no Internet Archive. O arquivo tem 15 páginas, 482.137 bytes e SHA-256 `217fa1c2130da2be197984edbe24840a9c80b1276071f90bcd442f140d3a1345`.
 
 ## Questão central
 

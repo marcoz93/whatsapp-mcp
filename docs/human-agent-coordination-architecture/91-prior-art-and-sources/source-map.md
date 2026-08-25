@@ -23,6 +23,7 @@ Este mapa registra somente as fontes já discutidas. A pesquisa sistemática ain
 - [MOISE+: structural, functional and deontic organization](https://jomi.das.ufsc.br/pubs/2002/Hubner-aamas2002.pdf)
 - [BDI Agents: From Theory to Practice](https://aaai.org/papers/icmas95-042-bdi-agents-from-theory-to-practice/)
 - [A Conceptual Analysis of Commitments in Multiagent Systems](https://www.csc2.ncsu.edu/faculty/mpsingh/papers/mas/commit.pdf)
+- [Cópia local preservada do relatório TR-96-09](commitments-in-multiagent-systems/singh-1996-conceptual-analysis-of-commitments.pdf)
 - [Registro institucional do relatório TR-96-09](https://repository.lib.ncsu.edu/items/a51477a9-ddb3-4c93-9c26-268ee5f2fb01)
 - [Business Process Model and Notation](https://www.omg.org/bpmn/)
 - [Case Management Model and Notation](https://www.omg.org/cmmn/)
