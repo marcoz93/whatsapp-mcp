@@ -24,6 +24,7 @@ O conteúdo ainda não é uma especificação final nem um plano de implementaç
 |---|---|---|
 | `90-integrated-models` | Relacionar os eixos em árvores, matrizes, statecharts e arquiteturas. | [Árvores e fluxos](90-integrated-models/decision-trees-and-flows.md) |
 | `91-prior-art-and-sources` | Registrar fontes, autores, formalizações reutilizáveis e limitações. | [Mapa de fontes](91-prior-art-and-sources/source-map.md) |
+| `92-research-program` | Investigar uma pergunta arquitetural por vez e transformar referências em requisitos verificáveis. | [Programa de pesquisa](92-research-program/README.md) |
 | `99-coverage-gaps-and-open-questions` | Controlar o que já foi explorado, lacunas, contradições e perguntas abertas. | [Mapa de cobertura](99-coverage-gaps-and-open-questions/coverage-map.md) |
 
 ## Regra de organização
