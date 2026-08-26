@@ -20,6 +20,38 @@ This repository contains only the WhatsApp integration layer: the Go bridge that
 
 Business workflows, demand analysis, project management, and multi-agent coordination are intentionally kept outside this repository so the connector remains independent and reusable.
 
+## Account Profiles
+
+Each WhatsApp number is stored in an isolated local profile. Only one profile is active at a time, so sessions, messages, and downloaded media never share a SQLite database.
+
+Create and select a profile before starting the bridge:
+
+```bash
+python3 scripts/whatsapp_profile.py create pessoal
+python3 scripts/whatsapp_profile.py use pessoal
+python3 scripts/whatsapp_profile.py current
+```
+
+Existing installations with a `whatsapp-bridge/store` directory can migrate it without copying or merging databases:
+
+```bash
+python3 scripts/whatsapp_profile.py migrate empresa
+```
+
+Stop the bridge before changing profiles. Available commands are:
+
+```bash
+python3 scripts/whatsapp_profile.py list
+python3 scripts/whatsapp_profile.py current
+python3 scripts/whatsapp_profile.py create PROFILE
+python3 scripts/whatsapp_profile.py use PROFILE
+python3 scripts/whatsapp_profile.py migrate PROFILE
+```
+
+Read tools identify their source with `account_profile`. The `get_active_account` tool returns the connected identity. Every send tool requires `expected_profile`, and both the MCP server and the Go bridge reject a mismatch before sending.
+
+An inactive profile is not synchronized in real time. Select it and restart the bridge and MCP to reconnect it. Running multiple numbers simultaneously requires separate bridge ports and is intentionally outside the scope of this profile mode.
+
 ## Installation
 
 ### Prerequisites
@@ -41,11 +73,13 @@ Business workflows, demand analysis, project management, and multi-agent coordin
 
 2. **Run the WhatsApp bridge**
 
-   Navigate to the whatsapp-bridge directory and run the Go application:
+   Create or select an account profile, then navigate to the `whatsapp-bridge` directory and run the complete Go package:
 
    ```bash
+   python3 scripts/whatsapp_profile.py create pessoal
+   python3 scripts/whatsapp_profile.py use pessoal
    cd whatsapp-bridge
-   go run main.go
+   go run .
    ```
 
    The first time you run it, you will be prompted to scan a QR code. Scan the QR code with your WhatsApp mobile app to authenticate.
@@ -105,7 +139,7 @@ If you're running this project on Windows, be aware that `go-sqlite3` requires *
    ```bash
    cd whatsapp-bridge
    go env -w CGO_ENABLED=1
-   go run main.go
+   go run .
    ```
 
 Without this setup, you'll likely run into errors like:
@@ -122,7 +156,7 @@ This application consists of two main components:
 
 ### Data Storage
 
-- All message history is stored in a SQLite database within the `whatsapp-bridge/store/` directory
+- Each profile stores its message history in `whatsapp-bridge/profiles/PROFILE/messages.db`
 - The database maintains tables for chats and messages
 - Messages are indexed for efficient searching and retrieval
 
@@ -184,6 +218,6 @@ By default, just the metadata of the media is stored in the local database. The 
 - **WhatsApp Already Logged In**: If your session is already active, the Go bridge will automatically reconnect without showing a QR code.
 - **Device Limit Reached**: WhatsApp limits the number of linked devices. If you reach this limit, you'll need to remove an existing device from WhatsApp on your phone (Settings > Linked Devices).
 - **No Messages Loading**: After initial authentication, it can take several minutes for your message history to load, especially if you have many chats.
-- **WhatsApp Out of Sync**: If your WhatsApp messages get out of sync with the bridge, delete both database files (`whatsapp-bridge/store/messages.db` and `whatsapp-bridge/store/whatsapp.db`) and restart the bridge to re-authenticate.
+- **WhatsApp Out of Sync**: First confirm the active profile with `python3 scripts/whatsapp_profile.py current`. If you deliberately need to re-pair that profile, stop the bridge and move its directory under `whatsapp-bridge/profiles/` to a backup location before creating it again. Do not delete another profile's databases.
 
 For additional Claude Desktop integration troubleshooting, see the [MCP documentation](https://modelcontextprotocol.io/quickstart/server#claude-for-desktop-integration-issues). The documentation includes helpful tips for checking logs and resolving common issues.
