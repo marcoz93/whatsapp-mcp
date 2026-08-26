@@ -14,6 +14,12 @@ Here's an example of what you can do when it's connected to Claude.
 
 > *Caution:* as with many MCP servers, the WhatsApp MCP is subject to [the lethal trifecta](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/). This means that project injection could lead to private data exfiltration.
 
+## Repository Scope
+
+This repository contains only the WhatsApp integration layer: the Go bridge that synchronizes messages and the Python MCP server that exposes tools to search, read, download, and send content.
+
+Business workflows, demand analysis, project management, and multi-agent coordination are intentionally kept outside this repository so the connector remains independent and reusable.
+
 ## Installation
 
 ### Prerequisites
