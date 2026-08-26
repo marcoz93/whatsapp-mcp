@@ -43,18 +43,19 @@ type Message struct {
 
 // Database handler for storing message history
 type MessageStore struct {
-	db *sql.DB
+	db       *sql.DB
+	storeDir string
 }
 
 // Initialize message store
-func NewMessageStore() (*MessageStore, error) {
+func NewMessageStore(storeDir string) (*MessageStore, error) {
 	// Create directory for database if it doesn't exist
-	if err := os.MkdirAll("store", 0755); err != nil {
+	if err := os.MkdirAll(storeDir, 0700); err != nil {
 		return nil, fmt.Errorf("failed to create store directory: %v", err)
 	}
 
 	// Open SQLite database for messages
-	db, err := sql.Open("sqlite3", "file:store/messages.db?_foreign_keys=on")
+	db, err := sql.Open("sqlite3", "file:"+filepath.Join(storeDir, "messages.db")+"?_foreign_keys=on")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open message database: %v", err)
 	}
@@ -90,7 +91,7 @@ func NewMessageStore() (*MessageStore, error) {
 		return nil, fmt.Errorf("failed to create tables: %v", err)
 	}
 
-	return &MessageStore{db: db}, nil
+	return &MessageStore{db: db, storeDir: storeDir}, nil
 }
 
 // Close the database connection
@@ -562,7 +563,7 @@ func downloadMedia(client *whatsmeow.Client, messageStore *MessageStore, message
 	var err error
 
 	// First, check if we already have this file
-	chatDir := fmt.Sprintf("store/%s", strings.ReplaceAll(chatJID, ":", "_"))
+	chatDir := mediaDirectory(messageStore.storeDir, chatJID)
 	localPath := ""
 
 	// Get media info from the database
@@ -794,13 +795,14 @@ func main() {
 	// Create database connection for storing session data
 	dbLog := waLog.Stdout("Database", "INFO", true)
 
-	// Create directory for database if it doesn't exist
-	if err := os.MkdirAll("store", 0755); err != nil {
-		logger.Errorf("Failed to create store directory: %v", err)
+	profile, err := loadActiveProfile(".")
+	if err != nil {
+		logger.Errorf("Failed to load active WhatsApp profile: %v", err)
 		return
 	}
+	logger.Infof("Active WhatsApp profile: %s", profile.Name)
 
-	container, err := sqlstore.New(context.Background(), "sqlite3", "file:store/whatsapp.db?_foreign_keys=on", dbLog)
+	container, err := sqlstore.New(context.Background(), "sqlite3", "file:"+profile.SessionDB()+"?_foreign_keys=on", dbLog)
 	if err != nil {
 		logger.Errorf("Failed to connect to database: %v", err)
 		return
@@ -827,7 +829,7 @@ func main() {
 	}
 
 	// Initialize message store
-	messageStore, err := NewMessageStore()
+	messageStore, err := NewMessageStore(profile.StoreDir)
 	if err != nil {
 		logger.Errorf("Failed to initialize message store: %v", err)
 		return
