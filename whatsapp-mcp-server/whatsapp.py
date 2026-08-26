@@ -6,9 +6,19 @@ import os.path
 import requests
 import json
 import audio
+from account_profile import load_active_profile
 
-MESSAGES_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'whatsapp-bridge', 'store', 'messages.db')
 WHATSAPP_API_BASE_URL = "http://localhost:8080/api"
+
+
+def messages_db_path() -> str:
+    return str(load_active_profile().messages_db)
+
+
+def get_active_account() -> dict:
+    response = requests.get(f"{WHATSAPP_API_BASE_URL}/account")
+    response.raise_for_status()
+    return response.json()
 
 @dataclass
 class Message:
@@ -49,7 +59,7 @@ class MessageContext:
 
 def get_sender_name(sender_jid: str) -> str:
     try:
-        conn = sqlite3.connect(MESSAGES_DB_PATH)
+        conn = sqlite3.connect(messages_db_path())
         cursor = conn.cursor()
         
         # First try matching by exact JID
@@ -135,7 +145,7 @@ def list_messages(
 ) -> List[Message]:
     """Get messages matching the specified criteria with optional context."""
     try:
-        conn = sqlite3.connect(MESSAGES_DB_PATH)
+        conn = sqlite3.connect(messages_db_path())
         cursor = conn.cursor()
         
         # Build base query
@@ -230,7 +240,7 @@ def get_message_context(
 ) -> MessageContext:
     """Get context around a specific message."""
     try:
-        conn = sqlite3.connect(MESSAGES_DB_PATH)
+        conn = sqlite3.connect(messages_db_path())
         cursor = conn.cursor()
         
         # Get the target message first
@@ -325,7 +335,7 @@ def list_chats(
 ) -> List[Chat]:
     """Get chats matching the specified criteria."""
     try:
-        conn = sqlite3.connect(MESSAGES_DB_PATH)
+        conn = sqlite3.connect(messages_db_path())
         cursor = conn.cursor()
         
         # Build base query
@@ -393,7 +403,7 @@ def list_chats(
 def search_contacts(query: str) -> List[Contact]:
     """Search contacts by name or phone number."""
     try:
-        conn = sqlite3.connect(MESSAGES_DB_PATH)
+        conn = sqlite3.connect(messages_db_path())
         cursor = conn.cursor()
         
         # Split query into characters to support partial matching
@@ -441,7 +451,7 @@ def get_contact_chats(jid: str, limit: int = 20, page: int = 0) -> List[Chat]:
         page: Page number for pagination (default 0)
     """
     try:
-        conn = sqlite3.connect(MESSAGES_DB_PATH)
+        conn = sqlite3.connect(messages_db_path())
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -486,7 +496,7 @@ def get_contact_chats(jid: str, limit: int = 20, page: int = 0) -> List[Chat]:
 def get_last_interaction(jid: str) -> str:
     """Get most recent message involving the contact."""
     try:
-        conn = sqlite3.connect(MESSAGES_DB_PATH)
+        conn = sqlite3.connect(messages_db_path())
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -535,7 +545,7 @@ def get_last_interaction(jid: str) -> str:
 def get_chat(chat_jid: str, include_last_message: bool = True) -> Optional[Chat]:
     """Get chat metadata by JID."""
     try:
-        conn = sqlite3.connect(MESSAGES_DB_PATH)
+        conn = sqlite3.connect(messages_db_path())
         cursor = conn.cursor()
         
         query = """
@@ -583,7 +593,7 @@ def get_chat(chat_jid: str, include_last_message: bool = True) -> Optional[Chat]
 def get_direct_chat_by_contact(sender_phone_number: str) -> Optional[Chat]:
     """Get chat metadata by sender phone number."""
     try:
-        conn = sqlite3.connect(MESSAGES_DB_PATH)
+        conn = sqlite3.connect(messages_db_path())
         cursor = conn.cursor()
         
         cursor.execute("""
@@ -622,7 +632,7 @@ def get_direct_chat_by_contact(sender_phone_number: str) -> Optional[Chat]:
         if 'conn' in locals():
             conn.close()
 
-def send_message(recipient: str, message: str) -> Tuple[bool, str]:
+def send_message(recipient: str, message: str, expected_profile: str) -> Tuple[bool, str]:
     try:
         # Validate input
         if not recipient:
@@ -632,6 +642,7 @@ def send_message(recipient: str, message: str) -> Tuple[bool, str]:
         payload = {
             "recipient": recipient,
             "message": message,
+            "expected_profile": expected_profile,
         }
         
         response = requests.post(url, json=payload)
@@ -650,7 +661,7 @@ def send_message(recipient: str, message: str) -> Tuple[bool, str]:
     except Exception as e:
         return False, f"Unexpected error: {str(e)}"
 
-def send_file(recipient: str, media_path: str) -> Tuple[bool, str]:
+def send_file(recipient: str, media_path: str, expected_profile: str) -> Tuple[bool, str]:
     try:
         # Validate input
         if not recipient:
@@ -665,7 +676,8 @@ def send_file(recipient: str, media_path: str) -> Tuple[bool, str]:
         url = f"{WHATSAPP_API_BASE_URL}/send"
         payload = {
             "recipient": recipient,
-            "media_path": media_path
+            "media_path": media_path,
+            "expected_profile": expected_profile,
         }
         
         response = requests.post(url, json=payload)
@@ -684,7 +696,7 @@ def send_file(recipient: str, media_path: str) -> Tuple[bool, str]:
     except Exception as e:
         return False, f"Unexpected error: {str(e)}"
 
-def send_audio_message(recipient: str, media_path: str) -> Tuple[bool, str]:
+def send_audio_message(recipient: str, media_path: str, expected_profile: str) -> Tuple[bool, str]:
     try:
         # Validate input
         if not recipient:
@@ -705,7 +717,8 @@ def send_audio_message(recipient: str, media_path: str) -> Tuple[bool, str]:
         url = f"{WHATSAPP_API_BASE_URL}/send"
         payload = {
             "recipient": recipient,
-            "media_path": media_path
+            "media_path": media_path,
+            "expected_profile": expected_profile,
         }
         
         response = requests.post(url, json=payload)

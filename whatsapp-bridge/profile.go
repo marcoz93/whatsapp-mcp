@@ -15,6 +15,13 @@ type AccountProfile struct {
 	StoreDir string
 }
 
+type AccountIdentity struct {
+	Profile      string `json:"profile"`
+	JID          string `json:"jid"`
+	PushName     string `json:"push_name"`
+	BusinessName string `json:"business_name"`
+}
+
 func loadActiveProfile(bridgeDir string) (AccountProfile, error) {
 	raw, err := os.ReadFile(filepath.Join(bridgeDir, ".active-profile"))
 	if err != nil {
@@ -51,4 +58,23 @@ func (profile AccountProfile) MessagesDB() string {
 
 func mediaDirectory(storeDir, chatJID string) string {
 	return filepath.Join(storeDir, strings.ReplaceAll(chatJID, ":", "_"))
+}
+
+func validateExpectedProfile(expected, active string) error {
+	if expected == "" {
+		return fmt.Errorf("expected_profile is required; active profile is %q", active)
+	}
+	if expected != active {
+		return fmt.Errorf("expected profile %q, active profile is %q", expected, active)
+	}
+	return nil
+}
+
+func newAccountIdentity(profile, jid, pushName, businessName string) AccountIdentity {
+	return AccountIdentity{
+		Profile:      profile,
+		JID:          jid,
+		PushName:     pushName,
+		BusinessName: businessName,
+	}
 }

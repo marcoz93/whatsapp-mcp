@@ -1,5 +1,11 @@
 from typing import List, Dict, Any, Optional
 from mcp.server.fastmcp import FastMCP
+from account_profile import (
+    ProfileMismatch,
+    load_active_profile,
+    profiled,
+    require_expected_profile,
+)
 from whatsapp import (
     search_contacts as whatsapp_search_contacts,
     list_messages as whatsapp_list_messages,
@@ -12,21 +18,40 @@ from whatsapp import (
     send_message as whatsapp_send_message,
     send_file as whatsapp_send_file,
     send_audio_message as whatsapp_audio_voice_message,
-    download_media as whatsapp_download_media
+    download_media as whatsapp_download_media,
+    get_active_account as whatsapp_get_active_account,
 )
 
 # Initialize FastMCP server
 mcp = FastMCP("whatsapp")
 
+
+def _profiled(data: Any) -> Dict[str, Any]:
+    active = load_active_profile()
+    return profiled(active.name, data)
+
+
 @mcp.tool()
-def search_contacts(query: str) -> List[Dict[str, Any]]:
+def get_active_account() -> Dict[str, Any]:
+    """Identify the only WhatsApp account currently exposed to this MCP."""
+    active = load_active_profile()
+    account = whatsapp_get_active_account()
+    if account.get("profile") != active.name:
+        raise ProfileMismatch(
+            f"MCP profile {active.name!r} does not match bridge profile "
+            f"{account.get('profile')!r}"
+        )
+    return account
+
+@mcp.tool()
+def search_contacts(query: str) -> Dict[str, Any]:
     """Search WhatsApp contacts by name or phone number.
     
     Args:
         query: Search term to match against contact names or phone numbers
     """
     contacts = whatsapp_search_contacts(query)
-    return contacts
+    return _profiled(contacts)
 
 @mcp.tool()
 def list_messages(
@@ -40,7 +65,7 @@ def list_messages(
     include_context: bool = True,
     context_before: int = 1,
     context_after: int = 1
-) -> List[Dict[str, Any]]:
+) -> Dict[str, Any]:
     """Get WhatsApp messages matching specified criteria with optional context.
     
     Args:
@@ -67,7 +92,7 @@ def list_messages(
         context_before=context_before,
         context_after=context_after
     )
-    return messages
+    return _profiled(messages)
 
 @mcp.tool()
 def list_chats(
@@ -76,7 +101,7 @@ def list_chats(
     page: int = 0,
     include_last_message: bool = True,
     sort_by: str = "last_active"
-) -> List[Dict[str, Any]]:
+) -> Dict[str, Any]:
     """Get WhatsApp chats matching specified criteria.
     
     Args:
@@ -93,7 +118,7 @@ def list_chats(
         include_last_message=include_last_message,
         sort_by=sort_by
     )
-    return chats
+    return _profiled(chats)
 
 @mcp.tool()
 def get_chat(chat_jid: str, include_last_message: bool = True) -> Dict[str, Any]:
@@ -104,7 +129,7 @@ def get_chat(chat_jid: str, include_last_message: bool = True) -> Dict[str, Any]
         include_last_message: Whether to include the last message (default True)
     """
     chat = whatsapp_get_chat(chat_jid, include_last_message)
-    return chat
+    return _profiled(chat)
 
 @mcp.tool()
 def get_direct_chat_by_contact(sender_phone_number: str) -> Dict[str, Any]:
@@ -114,10 +139,10 @@ def get_direct_chat_by_contact(sender_phone_number: str) -> Dict[str, Any]:
         sender_phone_number: The phone number to search for
     """
     chat = whatsapp_get_direct_chat_by_contact(sender_phone_number)
-    return chat
+    return _profiled(chat)
 
 @mcp.tool()
-def get_contact_chats(jid: str, limit: int = 20, page: int = 0) -> List[Dict[str, Any]]:
+def get_contact_chats(jid: str, limit: int = 20, page: int = 0) -> Dict[str, Any]:
     """Get all WhatsApp chats involving the contact.
     
     Args:
@@ -126,17 +151,17 @@ def get_contact_chats(jid: str, limit: int = 20, page: int = 0) -> List[Dict[str
         page: Page number for pagination (default 0)
     """
     chats = whatsapp_get_contact_chats(jid, limit, page)
-    return chats
+    return _profiled(chats)
 
 @mcp.tool()
-def get_last_interaction(jid: str) -> str:
+def get_last_interaction(jid: str) -> Dict[str, Any]:
     """Get most recent WhatsApp message involving the contact.
     
     Args:
         jid: The JID of the contact to search for
     """
     message = whatsapp_get_last_interaction(jid)
-    return message
+    return _profiled(message)
 
 @mcp.tool()
 def get_message_context(
@@ -152,12 +177,13 @@ def get_message_context(
         after: Number of messages to include after the target message (default 5)
     """
     context = whatsapp_get_message_context(message_id, before, after)
-    return context
+    return _profiled(context)
 
 @mcp.tool()
 def send_message(
     recipient: str,
-    message: str
+    message: str,
+    expected_profile: str,
 ) -> Dict[str, Any]:
     """Send a WhatsApp message to a person or group. For group chats use the JID.
 
@@ -165,60 +191,102 @@ def send_message(
         recipient: The recipient - either a phone number with country code but no + or other symbols,
                  or a JID (e.g., "123456789@s.whatsapp.net" or a group JID like "123456789@g.us")
         message: The message text to send
+        expected_profile: Profile that must be active for this send
     
     Returns:
         A dictionary containing success status and a status message
     """
+    active = load_active_profile()
+    try:
+        require_expected_profile(expected_profile, active.name)
+    except ProfileMismatch as error:
+        return {
+            "success": False,
+            "message": str(error),
+            "account_profile": active.name,
+        }
+
     # Validate input
     if not recipient:
         return {
             "success": False,
-            "message": "Recipient must be provided"
+            "message": "Recipient must be provided",
+            "account_profile": active.name,
         }
     
     # Call the whatsapp_send_message function with the unified recipient parameter
-    success, status_message = whatsapp_send_message(recipient, message)
+    success, status_message = whatsapp_send_message(
+        recipient, message, expected_profile
+    )
     return {
         "success": success,
-        "message": status_message
+        "message": status_message,
+        "account_profile": active.name,
     }
 
 @mcp.tool()
-def send_file(recipient: str, media_path: str) -> Dict[str, Any]:
+def send_file(recipient: str, media_path: str, expected_profile: str) -> Dict[str, Any]:
     """Send a file such as a picture, raw audio, video or document via WhatsApp to the specified recipient. For group messages use the JID.
     
     Args:
         recipient: The recipient - either a phone number with country code but no + or other symbols,
                  or a JID (e.g., "123456789@s.whatsapp.net" or a group JID like "123456789@g.us")
         media_path: The absolute path to the media file to send (image, video, document)
+        expected_profile: Profile that must be active for this send
     
     Returns:
         A dictionary containing success status and a status message
     """
     
-    # Call the whatsapp_send_file function
-    success, status_message = whatsapp_send_file(recipient, media_path)
+    active = load_active_profile()
+    try:
+        require_expected_profile(expected_profile, active.name)
+    except ProfileMismatch as error:
+        return {
+            "success": False,
+            "message": str(error),
+            "account_profile": active.name,
+        }
+
+    success, status_message = whatsapp_send_file(
+        recipient, media_path, expected_profile
+    )
     return {
         "success": success,
-        "message": status_message
+        "message": status_message,
+        "account_profile": active.name,
     }
 
 @mcp.tool()
-def send_audio_message(recipient: str, media_path: str) -> Dict[str, Any]:
+def send_audio_message(recipient: str, media_path: str, expected_profile: str) -> Dict[str, Any]:
     """Send any audio file as a WhatsApp audio message to the specified recipient. For group messages use the JID. If it errors due to ffmpeg not being installed, use send_file instead.
     
     Args:
         recipient: The recipient - either a phone number with country code but no + or other symbols,
                  or a JID (e.g., "123456789@s.whatsapp.net" or a group JID like "123456789@g.us")
         media_path: The absolute path to the audio file to send (will be converted to Opus .ogg if it's not a .ogg file)
+        expected_profile: Profile that must be active for this send
     
     Returns:
         A dictionary containing success status and a status message
     """
-    success, status_message = whatsapp_audio_voice_message(recipient, media_path)
+    active = load_active_profile()
+    try:
+        require_expected_profile(expected_profile, active.name)
+    except ProfileMismatch as error:
+        return {
+            "success": False,
+            "message": str(error),
+            "account_profile": active.name,
+        }
+
+    success, status_message = whatsapp_audio_voice_message(
+        recipient, media_path, expected_profile
+    )
     return {
         "success": success,
-        "message": status_message
+        "message": status_message,
+        "account_profile": active.name,
     }
 
 @mcp.tool()
@@ -235,16 +303,16 @@ def download_media(message_id: str, chat_jid: str) -> Dict[str, Any]:
     file_path = whatsapp_download_media(message_id, chat_jid)
     
     if file_path:
-        return {
+        return _profiled({
             "success": True,
             "message": "Media downloaded successfully",
             "file_path": file_path
-        }
+        })
     else:
-        return {
+        return _profiled({
             "success": False,
             "message": "Failed to download media"
-        }
+        })
 
 if __name__ == "__main__":
     # Initialize and run the server

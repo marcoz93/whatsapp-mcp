@@ -92,3 +92,31 @@ func TestMediaDirectoryUsesProfileDirectory(t *testing.T) {
 		t.Fatalf("media directory = %q, want %q", got, want)
 	}
 }
+
+func TestExpectedProfileMustMatchActiveProfile(t *testing.T) {
+	if err := validateExpectedProfile("empresa", "empresa"); err != nil {
+		t.Fatalf("matching profile rejected: %v", err)
+	}
+	if err := validateExpectedProfile("pessoal", "empresa"); err == nil {
+		t.Fatal("expected profile mismatch")
+	}
+	if err := validateExpectedProfile("", "empresa"); err == nil {
+		t.Fatal("expected empty profile to be rejected")
+	}
+}
+
+func TestNewAccountIdentity(t *testing.T) {
+	identity := newAccountIdentity(
+		"empresa",
+		"device@s.whatsapp.net",
+		"Nome",
+		"Empresa",
+	)
+
+	if identity.Profile != "empresa" || identity.JID != "device@s.whatsapp.net" {
+		t.Fatalf("unexpected identity: %+v", identity)
+	}
+	if identity.PushName != "Nome" || identity.BusinessName != "Empresa" {
+		t.Fatalf("unexpected names: %+v", identity)
+	}
+}

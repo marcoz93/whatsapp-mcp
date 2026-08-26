@@ -198,9 +198,10 @@ type SendMessageResponse struct {
 
 // SendMessageRequest represents the request body for the send message API
 type SendMessageRequest struct {
-	Recipient string `json:"recipient"`
-	Message   string `json:"message"`
-	MediaPath string `json:"media_path,omitempty"`
+	Recipient       string `json:"recipient"`
+	Message         string `json:"message"`
+	MediaPath       string `json:"media_path,omitempty"`
+	ExpectedProfile string `json:"expected_profile"`
 }
 
 // Function to send a WhatsApp message
@@ -677,7 +678,29 @@ func extractDirectPathFromURL(url string) string {
 }
 
 // Start a REST API server to expose the WhatsApp client functionality
-func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port int) {
+func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, profile AccountProfile, port int) {
+	// Handler for identifying the only account exposed by this bridge.
+	http.HandleFunc("/api/account", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		jid := ""
+		if client.Store.ID != nil {
+			jid = client.Store.ID.String()
+		}
+		identity := newAccountIdentity(
+			profile.Name,
+			jid,
+			client.Store.PushName,
+			client.Store.BusinessName,
+		)
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(identity)
+	})
+
 	// Handler for sending messages
 	http.HandleFunc("/api/send", func(w http.ResponseWriter, r *http.Request) {
 		// Only allow POST requests
@@ -690,6 +713,10 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 		var req SendMessageRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "Invalid request format", http.StatusBadRequest)
+			return
+		}
+		if err := validateExpectedProfile(req.ExpectedProfile, profile.Name); err != nil {
+			http.Error(w, err.Error(), http.StatusConflict)
 			return
 		}
 
@@ -908,7 +935,7 @@ func main() {
 	fmt.Println("\n✓ Connected to WhatsApp! Type 'help' for commands.")
 
 	// Start REST API server
-	startRESTServer(client, messageStore, 8080)
+	startRESTServer(client, messageStore, profile, 8080)
 
 	// Create a channel to keep the main goroutine alive
 	exitChan := make(chan os.Signal, 1)
